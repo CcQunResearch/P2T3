@@ -8,7 +8,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import Linear, TransformerEncoder, TransformerEncoderLayer
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from Main.infomax import local_global_loss
 
 
@@ -54,11 +54,29 @@ class P2T3(nn.Module):
 
         self.local_d = FF(self.d_model, self.d_model)
         self.global_d = FF(self.d_model, self.d_model)
+    #
+    #     self._init_parameters()
+    #
+    # def _init_parameters(self):
+    #     for p in self.parameters():
+    #         if p.dim() > 1:
+    #             # 使用 Xavier 初始化
+    #             nn.init.xavier_uniform_(p)
+    #             # 或使用 He 初始化
+    #             # nn.init.kaiming_uniform_(p, nonlinearity='relu')
 
-    def forward(self, padded_sequences, attention_mask):
+    def forward(self, padded_sequences, attention_mask, indexes):
         x = self.transformer_encoder(padded_sequences, src_key_padding_mask=attention_mask)
 
         global_embeddings = x[:, 0, :]
+
+        # level1embeddings = []
+        # for i in range(len(indexes)):
+        #     level1embedding = torch.mean(x[i][indexes[i]], dim=0)
+        #     level1embeddings.append(level1embedding)
+        #
+        # global_embeddings = torch.stack(level1embeddings)
+
         predictions = self.lin_class(global_embeddings)
         return F.log_softmax(predictions, dim=-1)
 

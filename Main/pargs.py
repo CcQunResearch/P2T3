@@ -6,7 +6,7 @@ def pargs():
     parser = argparse.ArgumentParser()
 
     # dataset hyperparameters
-    parser.add_argument('--dataset', type=str, default='DRWeibo')  # fine-tune dataset
+    parser.add_argument('--dataset', type=str, default='Weibo')  # fine-tune dataset
     parser.add_argument('--unsup_dataset', type=str, default='UWeibo')  # pretrain dataset
 
     # word embedding hyperparameters
@@ -25,27 +25,28 @@ def pargs():
 
     # pretrain and finetune
     # model hyperparameters
-    parser.add_argument('--d_model', type=int, default=384)
-    parser.add_argument('--num_layers', type=int, default=6)
-    parser.add_argument('--num_heads', type=int, default=8)
+    parser.add_argument('--d_model', type=int, default=512)
+    parser.add_argument('--num_layers', type=int, default=8)
+    parser.add_argument('--num_heads', type=int, default=12)
     parser.add_argument('--dim_feedforward', type=int, default=1024)
     parser.add_argument('--measure', type=str, default='JSD')  # GAN, JSD, X2, KL, RKL, DV, H2, W1
-    parser.add_argument('--pooling', type=str, default='mean')  # level1 or mean
+    parser.add_argument('--pooling', type=str, default='level1')  # level1 or mean
 
     # only pretrain
     # pretrain hyperparameters
     parser.add_argument('--pt_batch_size', type=int, default=8)
     parser.add_argument('--pt_acc_batch_size', type=int, default=800)
-    parser.add_argument('--pt_num_epochs', type=int, default=50)
+    parser.add_argument('--pt_num_epochs', type=int, default=30)
     parser.add_argument('--pt_lr', type=float, default=5e-5)
     parser.add_argument('--pt_weight_decay', type=float, default=1e-3)
     parser.add_argument('--pt_warmup_ratio', type=float, default=0.1)
 
     # only finetune
     # finetune hyperparameters
-    parser.add_argument('--ft_runs', type=int, default=10)
+    parser.add_argument('--ft_runs', type=int, default=5)
     parser.add_argument('--ft_batch_size', type=int, default=4)
-    parser.add_argument('--ft_num_epochs', type=int, default=100)
+    parser.add_argument('--ft_acc_batch_size', type=int, default=16)
+    parser.add_argument('--ft_num_epochs', type=int, default=120)
     parser.add_argument('--ft_lr', type=float, default=5e-5)
     parser.add_argument('--ft_weight_decay', type=float, default=1e-3)
     parser.add_argument('--ft_warmup_ratio', type=float, default=0.1)

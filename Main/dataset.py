@@ -63,7 +63,7 @@ class SequenceTreeDataset(Dataset):
             self.lengths.append(len(features))
 
     def load_data(self):
-        print('loading data...')
+        print('loading data...', flush=True)
         os.makedirs(self.processed_data_path)
 
         self.data = []
@@ -226,3 +226,10 @@ class IterableSequenceTreeDataset(IterableDataset):
             one_data['level1_index'] = torch.tensor(level1_index)
             one_data['pooling_index'] = torch.tensor(chain_identifier_list)
             yield one_data
+
+
+def normalize(vector):
+    mean = torch.mean(vector)
+    std = torch.std(vector)
+    normalized_vector = (vector - mean) / std
+    return normalized_vector

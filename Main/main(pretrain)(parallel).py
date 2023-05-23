@@ -92,11 +92,12 @@ def train(rank, ngpus_per_node, unlabeled_dataset_path, word2vec, bert_model, co
     grad_accumulation_counter = 0
     for epoch in range(pt_num_epochs):
         if rank == 0:
-            print(f"epoch {epoch + 1} start")
-        loss = torch.tensor(0.0).to(device)
+            print(f"epoch {epoch + 1} start", flush=True)
+        error = 0
         for i, batch in enumerate(unsup_train_loader):
             padded_sequences, attention_mask, indexes = batch
             loss = model.module.unsup_loss(padded_sequences, attention_mask, indexes)
+            error += loss.item() * len(indexes)
             loss = loss / grad_accumulation_steps
             loss.backward()
 
@@ -109,11 +110,13 @@ def train(rank, ngpus_per_node, unlabeled_dataset_path, word2vec, bert_model, co
                 step += 1
 
             if (i + 1) * pt_batch_size % 5000 == 0 and rank == 0:
-                print(f"  epoch {epoch + 1} have trained {(i + 1) * pt_batch_size} samples")
+                print(
+                    f"  epoch {epoch + 1} have trained {(i + 1) * pt_batch_size} samples, loss: {loss.item()}, training Step: {step}",
+                    flush=True)
 
         if rank == 0:
             with open(log_path, 'a') as log:
-                write_log(log, f"Epoch: {epoch + 1}, Loss: {loss.item()}, Training Step: {step}")
+                write_log(log, f"Epoch: {epoch + 1}, Loss: {error / len(unsup_train_loader.dataset)}, Training Step: {step}")
             torch.save(model.module.state_dict(), weight_path)
 
 

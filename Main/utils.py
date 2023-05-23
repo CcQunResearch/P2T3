@@ -57,6 +57,7 @@ def create_log_dict_pretrain(args):
     log_dict['num heads'] = args.num_heads
     log_dict['dim feedforward'] = args.dim_feedforward
     log_dict['measure'] = args.measure
+    log_dict['pooling'] = args.pooling
 
     log_dict['pt batch size'] = args.pt_batch_size
     log_dict['pt acc batch size'] = args.pt_acc_batch_size
@@ -90,6 +91,7 @@ def create_log_dict_pretrain_parallel(args):
     log_dict['num heads'] = args.num_heads
     log_dict['dim feedforward'] = args.dim_feedforward
     log_dict['measure'] = args.measure
+    log_dict['pooling'] = args.pooling
 
     log_dict['pt batch size'] = args.pt_batch_size
     log_dict['pt acc batch size'] = args.pt_acc_batch_size
@@ -125,6 +127,7 @@ def create_log_dict_finetuning(args):
     log_dict['num heads'] = args.num_heads
     log_dict['dim feedforward'] = args.dim_feedforward
     log_dict['measure'] = args.measure
+    log_dict['pooling'] = args.pooling
 
     log_dict['pt batch size'] = args.pt_batch_size
     log_dict['pt acc batch size'] = args.pt_acc_batch_size
@@ -135,6 +138,7 @@ def create_log_dict_finetuning(args):
 
     log_dict['ft runs'] = args.ft_runs
     log_dict['ft batch size'] = args.ft_batch_size
+    log_dict['ft acc batch size'] = args.ft_acc_batch_size
     log_dict['ft num epochs'] = args.ft_num_epochs
     log_dict['ft lr'] = args.ft_lr
     log_dict['ft weight decay'] = args.ft_weight_decay

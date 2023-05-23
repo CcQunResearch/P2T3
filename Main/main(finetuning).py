@@ -34,27 +34,6 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from transformers import get_linear_schedule_with_warmup, AdamW
 
 
-def fine_tuning(train_loader, model, optimizer, scheduler, lamda):
-    model.train()
-    total_loss = 0
-
-    for batch in train_loader:
-        optimizer.zero_grad()
-
-        padded_sequences, attention_mask, indexes, y = batch
-        pred = model(padded_sequences, attention_mask)
-        sup_loss = F.nll_loss(pred, y.long().view(-1))
-        unsup_loss = model.unsup_loss(padded_sequences, attention_mask, indexes)
-
-        loss = sup_loss + lamda * unsup_loss
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
-        total_loss += loss.item() * padded_sequences.size(0)
-
-    return total_loss / len(train_loader.dataset)
-
-
 def test(model, dataloader, num_classes):
     model.eval()
     error = 0
@@ -64,7 +43,7 @@ def test(model, dataloader, num_classes):
 
     for batch in dataloader:
         padded_sequences, attention_mask, indexes, y = batch
-        pred = model(padded_sequences, attention_mask)
+        pred = model(padded_sequences, attention_mask, indexes)
         error += F.nll_loss(pred, y.long().view(-1)).item() * padded_sequences.size(0)
         y_true += y.tolist()
         y_pred += pred.max(1).indices.tolist()
@@ -159,6 +138,7 @@ if __name__ == '__main__':
     device = args.gpu if args.cuda else 'cpu'
     ft_runs = args.ft_runs
     ft_batch_size = args.ft_batch_size
+    ft_acc_batch_size = args.ft_acc_batch_size
     ft_num_epochs = args.ft_num_epochs
     ft_weight_decay = args.ft_weight_decay
     ft_warmup_ratio = args.ft_warmup_ratio
@@ -224,13 +204,14 @@ if __name__ == '__main__':
 
             model = P2T3(num_layers, d_model, num_heads, dim_feedforward, word_embedding_size, pooling, measure).to(
                 device)
-            # model.load_state_dict(torch.load(weight_path))
+            model.load_state_dict(torch.load(weight_path))
             model.lin_class = Linear(d_model, num_classes).to(device)
 
             # optimizer = Adam(model.parameters(), lr=ft_lr, weight_decay=ft_weight_decay)
             # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.7, patience=5, min_lr=0.000001)
 
-            total_steps = len(train_loader) * ft_num_epochs
+            grad_accumulation_steps = ft_acc_batch_size // ft_batch_size
+            total_steps = len(train_loader) * ft_num_epochs // grad_accumulation_steps
             warmup_steps = int(ft_warmup_ratio * total_steps)
             optimizer = AdamW(model.parameters(), lr=ft_lr, weight_decay=ft_weight_decay)
             scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps,
@@ -240,9 +221,31 @@ if __name__ == '__main__':
                                                               args.ft_lr, 0, 0, ft_log_record)
             write_log(log, log_info)
 
+            step = 0
+            grad_accumulation_counter = 0
             for epoch in range(1, ft_num_epochs + 1):
                 ft_lr = scheduler.optimizer.param_groups[0]['lr']
-                _ = fine_tuning(train_loader, model, optimizer, scheduler, lamda)
+                model.train()
+                for batch in train_loader:
+                    optimizer.zero_grad()
+
+                    padded_sequences, attention_mask, indexes, y = batch
+                    pred = model(padded_sequences, attention_mask, indexes)
+                    sup_loss = F.nll_loss(pred, y.long().view(-1))
+
+                    # unsup_loss = model.unsup_loss(padded_sequences, attention_mask, indexes)
+                    # loss = sup_loss + lamda * unsup_loss
+                    loss = sup_loss
+                    loss = loss / grad_accumulation_steps
+                    loss.backward()
+
+                    grad_accumulation_counter += 1
+                    if grad_accumulation_counter == grad_accumulation_steps:
+                        optimizer.step()
+                        scheduler.step()  # update learning rate schedule
+                        optimizer.zero_grad()
+                        grad_accumulation_counter = 0
+                        step += 1
 
                 train_error, train_acc, _, _, _, _, _ = test(model, train_loader, num_classes)
                 val_error, log_info, ft_log_record = test_and_log(model, val_loader, test_loader, num_classes, epoch,

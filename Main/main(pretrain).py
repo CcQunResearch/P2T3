@@ -85,7 +85,6 @@ if __name__ == '__main__':
     weight_path = osp.join(dirname, '..', 'Model', saved_model_name)
 
     log = open(log_path, 'w')
-    write_log(log, f'Pretraining')
     log_dict = create_log_dict_pretrain(args)
     log_dict['saved model name'] = saved_model_name
     write_json(log_dict, log_json_path)
@@ -116,13 +115,18 @@ if __name__ == '__main__':
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps,
                                                 num_training_steps=total_steps)
 
+    write_log(log, f'Pretraining')
+
     step = 0
     model.train()
     grad_accumulation_counter = 0
     for epoch in range(pt_num_epochs):
-        for batch in unsup_train_loader:
+        print(f"epoch {epoch + 1} start", flush=True)
+        error = 0
+        for i, batch in enumerate(unsup_train_loader):
             padded_sequences, attention_mask, indexes = batch
             loss = model.unsup_loss(padded_sequences, attention_mask, indexes)
+            error += loss.item() * len(indexes)
             loss = loss / grad_accumulation_steps
             loss.backward()
 
@@ -134,5 +138,9 @@ if __name__ == '__main__':
                 grad_accumulation_counter = 0
                 step += 1
 
-        write_log(log, f"Epoch: {epoch + 1}, Loss: {loss.item()}, Training Step: {step}")
-    torch.save(model.state_dict(), weight_path)
+            if (i + 1) * pt_batch_size % 5000 == 0:
+                print(
+                    f"  epoch {epoch + 1} have trained {(i + 1) * pt_batch_size} samples, loss: {loss.item()}, training Step: {step}",
+                    flush=True)
+        write_log(log, f"Epoch: {epoch + 1}, Loss: {error / len(unsup_train_loader.dataset)}, Training Step: {step}")
+        torch.save(model.state_dict(), weight_path)

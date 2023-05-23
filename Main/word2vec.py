@@ -41,7 +41,7 @@ class Embedding():
             self.embedding_matrix.append(self.embedding.wv.get_vector(word, norm=True))
         self.embedding_matrix = torch.tensor(self.embedding_matrix)
         self.add_embedding("<UNK>")
-        print("total words: {}".format(len(self.embedding_matrix)))
+        print("total words: {}".format(len(self.embedding_matrix)), flush=True)
         return self.embedding_matrix
 
     def sentence_word2idx(self, sen):
